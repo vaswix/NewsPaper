@@ -1,0 +1,28 @@
+{% extends 'flatpages/default.html' %}
+
+{% block title %} Post delete {% endblock title %}
+
+
+{% block content %}  <h2>Вы действительно хотите удалить данный товар?</h2>
+    <table>
+        </thead>
+        <tr>
+            <td class="pr-4">
+                {{ post.author }}
+            </td>
+            <td class="pr-4">
+                {{ post.title }}
+            </td>
+            <td class="pr-4">
+                {{ post.date_created }}
+            </td>
+            <td class="pr-4">
+                {{ post.text }}
+            </td>
+        </tr>
+    </table>
+
+    <form method="POST">
+        {% csrf_token %}
+        <input type="submit" value="подтвердить"></form>
+{% endblock content %}

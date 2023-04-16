@@ -21,6 +21,9 @@ class Author(models.Model):
         self.author_rating = post_rating * 3 + comment_rating
         self.save()
 
+    def __str__(self):
+        return str(self.username)
+
 
 class Category(models.Model):
     category_title = models.CharField(max_length=255, unique=True)
@@ -55,6 +58,9 @@ class Post(models.Model):
 
     def preview(self):
         return f'{self.text[:123]} ...'
+
+    def get_absolute_url(self):
+        return f'/news/{self.pk}'
 
 
 class PostCategory(models.Model):
