@@ -76,6 +76,9 @@
     </div>
     <hr>
     <a href="{% url 'post_create' %}">Add news</a>
+    {% if is_not_author %}
+        <button><a href="upgrade/">Хочу быть автором!</button>
+    {% endif %}
 {% endblock content %}
 
 
