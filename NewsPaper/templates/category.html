@@ -1,0 +1,17 @@
+{% extends 'flatpages/default.html' %}
+
+{% block title %}
+    Category
+{% endblock %}
+
+
+{% block content %}
+    {% for category in categories %}
+        {% if category.pk not in user_categories %}
+            <h2>{{ category }}</h2><a href="{% url 'subscribe_category' category.pk %}">Подписаться</a>
+        {% else %}
+            <h2>{{ category }}</h2>Вы уже подписаны
+        {% endif %}
+    {% endfor %}
+    <hr>
+{% endblock %}

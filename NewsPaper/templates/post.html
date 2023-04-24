@@ -7,8 +7,10 @@ News
 
 
 {% block content %}
+
 <h1>{{ post.title|censor }}</h1>
 <h2>{{ post.date_created|date:'d-M-Y h:m' }}</h2>
+        <h3>Category: {{ category }}</h3>
 <p>{{ post.text|censor }}</p>
 {% endblock %}
 

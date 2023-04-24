@@ -5,8 +5,10 @@ from django.views.generic import ListView, DetailView, CreateView, UpdateView, D
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import Group
 from django.contrib.auth.mixins import PermissionRequiredMixin
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
 
-from .models import Post
+from .models import Post, Category, User
 
 from .filters import PostFilter
 
@@ -32,17 +34,65 @@ class NewsDetail(DetailView):
     template_name = 'post.html'
     context_object_name = 'post'
 
+    def post(self, request, *args, **kwargs):
+        pass
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        post = Post.objects.get(pk=self.kwargs['pk'])
+        context['category'] = post.category.values()[0]['category_title']
+        return context
+
 
 class NewsCreate(PermissionRequiredMixin, LoginRequiredMixin, CreateView):
     form_class = PostForm
     template_name = 'post_create.html'
-    permission_required = ('news.add_post', )
+    permission_required = ('news.add_post',)
+
+    def post(self, request, *args, **kwargs):
+        post = Post(
+            author_id=request.POST['author'],
+            type_news=request.POST['type_news'],
+            title=request.POST['title'],
+            text=request.POST['text'],
+        )
+        post.save()
+        post.category.add(int(request.POST['category']))
+        post.save()
+
+        pk_category = post.category.values('pk')[0]['pk']
+        users = Category.objects.all().filter(pk__exact=pk_category).values('subscribers')
+
+        email_list = []
+        for user in users:
+            email = User.objects.all().filter(pk__exact=user['subscribers']).values('email')[0]['email']
+            if email:
+                email_list.append(email)
+
+        html_content = render_to_string(
+            'news_created.html',
+            {
+                'post': post,
+            }
+        )
+
+        msg = EmailMultiAlternatives(
+            subject=post.title,
+            body=post.text[0:49],
+            from_email='Lack10000@yandex.ru',
+            to=email_list
+        )
+
+        msg.attach_alternative(html_content, 'text/html')
+        msg.send()
+
+        return redirect('/')
 
 
 class NewsUpdate(PermissionRequiredMixin, LoginRequiredMixin, UpdateView):
     form_class = PostForm
     template_name = 'post_create.html'
-    permission_required = ('news.change_post', )
+    permission_required = ('news.change_post',)
 
     def get_object(self, **kwargs):
         pk = self.kwargs.get('pk')
@@ -53,7 +103,19 @@ class NewsDelete(PermissionRequiredMixin, LoginRequiredMixin, DeleteView):
     queryset = Post.objects.all()
     template_name = 'post_delete.html'
     success_url = '/news/'
-    permission_required = ('news.delete_post', )
+    permission_required = ('news.delete_post',)
+
+
+class CategoryView(ListView):
+    model = Category
+    template_name = 'category.html'
+    context_object_name = 'categories'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user_category = [x['pk'] for x in self.request.user.category_set.values('category_title').values('pk')]
+        context['user_categories'] = user_category
+        return context
 
 
 @login_required
@@ -63,3 +125,9 @@ def upgrade_me(request):
     if not request.user.groups.filter(name='authors').exists():
         author_group.user_set.add(user)
     return redirect('/')
+
+def subscribe_category(request, **kwargs):
+    user = request.user
+    pk = kwargs.get('pk')
+    Category.objects.get(pk=pk).subscribers.add(user)
+    return redirect('category')
