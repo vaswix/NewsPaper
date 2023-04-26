@@ -1,18 +1,17 @@
-from allauth.account.forms import SignupForm
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import redirect
-from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.models import Group
-from django.contrib.auth.mixins import PermissionRequiredMixin
-from django.core.mail import EmailMultiAlternatives
-from django.template.loader import render_to_string
+from datetime import datetime
 
-from .models import Post, Category, User
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import PermissionRequiredMixin
+from django.contrib.auth.models import Group
+from django.core.mail import EmailMultiAlternatives
+from django.shortcuts import redirect
+from django.template.loader import render_to_string
+from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 
 from .filters import PostFilter
-
 from .forms import PostForm
+from .models import Post, Category, User
 
 
 class NewsList(ListView):
@@ -51,7 +50,7 @@ class NewsCreate(PermissionRequiredMixin, LoginRequiredMixin, CreateView):
 
     def post(self, request, *args, **kwargs):
         post = Post(
-            author_id=request.POST['author'],
+            author_id=self.request.user.id,
             type_news=request.POST['type_news'],
             title=request.POST['title'],
             text=request.POST['text'],
@@ -60,12 +59,12 @@ class NewsCreate(PermissionRequiredMixin, LoginRequiredMixin, CreateView):
         post.category.add(int(request.POST['category']))
         post.save()
 
-        pk_category = post.category.values('pk')[0]['pk']
-        users = Category.objects.all().filter(pk__exact=pk_category).values('subscribers')
+        pk_category = self.request.POST['category']
+        users = Category.objects.all().filter(pk=pk_category).values('subscribers')
 
         email_list = []
         for user in users:
-            email = User.objects.all().filter(pk__exact=user['subscribers']).values('email')[0]['email']
+            email = User.objects.all().filter(pk=user['subscribers']).values('email')[0]['email']
             if email:
                 email_list.append(email)
 
@@ -87,6 +86,17 @@ class NewsCreate(PermissionRequiredMixin, LoginRequiredMixin, CreateView):
         msg.send()
 
         return redirect('/')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        posts = Post.objects.filter(author__username=self.request.user.pk).filter(
+            date_created__day=datetime.today().day
+        )
+
+        if len(posts) >= 3:
+            context.pop('form')
+            context['info'] = 'Нельзя создать больше 3 постов в день'
+        return context
 
 
 class NewsUpdate(PermissionRequiredMixin, LoginRequiredMixin, UpdateView):
@@ -125,6 +135,7 @@ def upgrade_me(request):
     if not request.user.groups.filter(name='authors').exists():
         author_group.user_set.add(user)
     return redirect('/')
+
 
 def subscribe_category(request, **kwargs):
     user = request.user
