@@ -1,5 +1,6 @@
 {% extends 'flatpages/default.html' %}
 {% load custom_filters %}
+{% load cache %}
 
 {% block title %}
     News
@@ -31,7 +32,7 @@
                     Text
                 </td>
             </tr>
-            {% for post in filter.qs %}
+            {% for post in posts %}
                 <tr>
                     <td class="pl-5">
                         {{ post.title|censor }}
@@ -57,23 +58,33 @@
     {% else %}
         <h2>Товаров нет!</h2>
     {% endif %}
+    {% cache 120 paginator %}
     <div class="pagination">
-    <span class="step-links">
-        {% if page_obj.has_previous %}
-            <a href="?page=1">first</a>
-            <a href="?page={{ page_obj.previous_page_number }}">previous</a>
-        {% endif %}
 
-        <span class="current">
-            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.
-        </span>
-
-        {% if page_obj.has_next %}
-            <a href="?page={{ page_obj.next_page_number }}">next</a>
-            <a href="?page={{ page_obj.paginator.num_pages }}">last</a>
-        {% endif %}
-    </span>
+      {% if is_paginated %}
+          <!-- Если доступна предыдущая страница, то даём ссылку на неё и самую первую страницу -->
+          {% if page_obj.has_previous %}
+              <a href="?page=1">First</a>
+              <a href="?page={{ page_obj.previous_page_number }}"><<<</a>
+          {% endif %}
+          <!-- Показываем только текущую страницу и ближайшие к ней, чтобы список не тянулся и не захламлял страницу -->
+          {% for num in page_obj.paginator.page_range %}
+              {% if page_obj.number == num %}
+                  <a>{{ num }}</a>
+              {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                  <a href="?page={{ num }}">{{ num }}</a>
+              {% endif %}
+          {% endfor %}
+          <!-- Если есть следующая страница, то даём ссылку на неё и на самую последнюю страницу -->
+          {% if page_obj.has_next %}
+              <a href="?page={{ page_obj.next_page_number }}">>>></a>
+              <a href="?page={{ page_obj.paginator.num_pages }}">Last</a>
+          {% endif %}
+      {% else %}
+          <h2>Публикаций нет!</h2>
+      {% endif %}
     </div>
+    {% endcache %}
     <hr>
     <a href="{% url 'post_create' %}">Add news</a>
     {% if is_not_author %}
