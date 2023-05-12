@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/4.1/ref/settings/
 import os
 import os.path
 from pathlib import Path
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -84,6 +85,81 @@ TEMPLATES = [
         },
     },
 ]
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            "format": "{levelname} {asctime} {pathname} {exc_info}",
+            "style": "{",
+        },
+        'simple': {
+            'format': '{asctime} {levelname} {message}',
+            'style': '{'
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'WARNING',
+        'formatters': 'verbose'
+    },
+    'handlers': {
+        'fileINFO': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'general.log'),
+            'formatter': 'simple'
+
+        },
+        'fileSecure': {
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'secure.log'),
+            'formatter': 'simple'
+        },
+
+        'fileERROR': {
+            'level': 'ERROR',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'error.log'),
+            'formatter': 'simple'
+        },
+
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+        },
+
+        'mail_admins': {
+            'level': 'ERROR',
+            'class': 'django.utils.log.AdminEmailHandler',
+            'filters': ['verbose']
+        }
+    },
+
+    'loggers': {
+        'django': {
+            'handlers': ['fileINFO', 'fileERROR', 'console'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        'django.secure': {
+            'handlers': ['fileSecure'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        'django.request': {
+            'handlers': ['mail_admins'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'django.server': {
+            'handlers': ['mail_admins'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+    }
+}
 
 CACHES = {
     'default': {
